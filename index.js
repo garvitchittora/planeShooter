@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
 let Application = PIXI.Application,loader = PIXI.loader,Sprite = PIXI.Sprite,Rectangle = PIXI.Rectangle;
 
 let app = new Application({ 
-    width: 800, 
+    width: 1000, 
     height: 600,                       
     antialias: true, 
     transparent: false, 
@@ -58,14 +58,19 @@ document.addEventListener('keydown', handleKeyDown);
 document.addEventListener('keyup', handleKeyUp);
 
 document.body.appendChild(app.view);
-
 loader
   .add("space", "images/bg2.jpg")
   .add("images/character.json")
   .add("sound","images/bulletsound2.mp3")
+  .add("level1","images/level1.png")
+  .add("level2","images/level2.png")
+  .add("level3","images/level3.png")
+  .add("level4","images/level4.png")
+  .add("level5","images/level5.png")
+  .add("level6","images/level6.png")
   .on("progress", loadProgressHandler)
   .load(setup);
-  
+
 function loadProgressHandler(loader, resource) {
   console.log("loading.. "); 
 }
@@ -73,11 +78,9 @@ function loadProgressHandler(loader, resource) {
 let Defenders, PauseContainer;
 let space, shooter, defender, bullet; 
 let spaceVelocity = 2, shooterMaxVelocity = 10, defendersVelocity=4 ;
-let numberOfDefenders = 5, xDefenderOffset = 800;
-let healthMessage, scoreText;
-let scorebombIncrease=0,flag_level1=0;
-const level1 = PIXI.Texture.from('images/defender1.png');
-const level2 = PIXI.Texture.from('images/defender2.png');
+let numberOfDefenders = 5, xDefenderOffset = 1000,bomb =20,Nuclearbomb=10;
+let scorebombIncrease=0,healthMessage, scoreText,killText;
+
 //for level change
 var rad = document.myForm.easy;
 var prev = null;
@@ -115,15 +118,15 @@ let GameOverTextStyle = new PIXI.TextStyle({
 
 function setup() {
 
-  space1 = new Sprite(PIXI.loader.resources.space.texture);
-  space1.width = 800;
+  space1 = new Sprite(loader.resources.space.texture);
+  space1.width = 1000;
   space1.height = 600;
   app.stage.addChild(space1);
 
-  space2 = new Sprite(PIXI.loader.resources.space.texture);
-  space2.width = 800;
+  space2 = new Sprite(loader.resources.space.texture);
+  space2.width = 1000;
   space2.height = 600;
-  space2.position.set(800,0);
+  space2.position.set(1000,0);
   app.stage.addChild(space2);
 
   renderBullet = () => {
@@ -136,6 +139,8 @@ function setup() {
     bullet.drawEllipse(6, 0, 5, 3.3);
     bullet.endFill();
     bullet.velocity = 10;
+    bullet.value=1;
+    bullet.kill=1;
     return bullet;
   }
 
@@ -151,6 +156,25 @@ function setup() {
     bullet.drawEllipse(30, 0, 20,25);
     bullet.endFill();
     bullet.velocity = 8;
+    bullet.value=2;
+    bullet.kill=2;
+    return bullet;
+  }
+
+  renderNuclearBomb = () => {
+    bullet = new PIXI.Graphics();
+    bullet.beginFill(0xFFFF00);
+    bullet.drawEllipse(0, 0, 200,200);
+    bullet.beginFill(0xff8533);   
+    bullet.drawEllipse(50, 0, 100, 100);
+    bullet.beginFill(0xff751a);   
+    bullet.drawEllipse(150, 0,50, 50);
+    bullet.beginFill(0xff1a1a);
+    bullet.drawEllipse(300, 0, 10,10);
+    bullet.endFill();
+    bullet.velocity = 20;
+    bullet.value=30;
+    bullet.kill=30;
     return bullet;
   }
 
@@ -161,19 +185,17 @@ function setup() {
 
   Defenders = new PIXI.Container();
 
-  
-
   for (let i = 0; i < numberOfDefenders; i++) {
     defender = new Sprite(characters["defender"]);
 
     let xPosition = randomInt(xDefenderOffset, 2000);
 
     let yPosition = randomInt(0, app.stage.height - defender.height);
-
-    defender.id = `defender0${i}`;
     defender.x = xPosition;
     defender.y = yPosition;
-
+    defender.attack=0;
+    defender.point=1;
+    defender.score=1;
     Defenders.addChild(defender);
   }
 
@@ -199,7 +221,7 @@ function setup() {
   shooter.position.set(10, 200);
   shooter.vx = 4;
   shooter.vy = 4;
-  shooter.health = 5;
+  shooter.health = 100;
   shooter.score = 0;
 
   shooter.hitArea = new PIXI.Ellipse(shooter.pivot.x, shooter.pivot.y, shooter.width, shooter.height);
@@ -207,7 +229,7 @@ function setup() {
   PauseContainer = new PIXI.Container();
   const background = new PIXI.Graphics();
   background.beginFill('black', 0.5);
-  background.drawRect(0, 0, 800, 600);
+  background.drawRect(0, 0, 1000, 600);
   background.endFill();
   PauseContainer.addChild(background);
 
@@ -238,15 +260,19 @@ function setup() {
 
   healthText = new PIXI.Text(`Health: ${shooter.health}`, textStyle);
   app.stage.addChild(healthText);
-  healthText.position.set(50, 10);
+  healthText.position.set(20, 10);
 
   scoreText = new PIXI.Text(`Score: ${shooter.score}`, textStyle);
   app.stage.addChild(scoreText);
-  scoreText.position.set(150, 10);
+  scoreText.position.set(140, 10);
 
   bombText = new PIXI.Text(`Bomb: ${bomb}`, textStyle);
   app.stage.addChild(bombText);
   bombText.position.set(250, 10);
+
+  killText = new PIXI.Text(`Last Killed: No kills yet   :P`, textStyle);
+  app.stage.addChild(killText);
+  killText.position.set(350, 10);
 
   gameOverText = new PIXI.Text('Oops.. Game Over!', GameOverTextStyle);
 
@@ -264,82 +290,168 @@ function play() {
 
   space1.x -= spaceVelocity;
   space2.x -= spaceVelocity;
-  if (space1.x == -800) space1.x = 800;
-  if (space2.x == -800) space2.x = 800;
+  if (space1.x == -1000) space1.x = 1000;
+  if (space2.x == -1000) space2.x = 1000;
 
   Bullets.children.forEach(Bullet => {
     Bullet.x += Bullet.velocity;
 
-    if(Bullet.x == 800 + Bullet.width) {
+    if(Bullet.x == 1000 + Bullet.width) {
       Bullets.removeChild(Bullet);
     }
   });
 
     Defenders.children.forEach((Allien, index) => {
     Allien.x -= defendersVelocity + index/1.5;
-    if(Allien.x<800){
-      Allien.y += .5;
-    }
     if(shooter.x + shooter.width >= Allien.x && shooter.y + shooter.height >= Allien.y && 
       shooter.x <= Allien.x + Allien.width && shooter.y <= Allien.y + Allien.height) {
       shooter.health -= 1;
       healthText.text = `Health: ${shooter.health}`;
       Allien.visible = false;
-      Allien.x = 810;
+      Allien.x = 1010;
       Allien.y = randomInt(0, app.stage.height - Allien.height );
     }
 
     Bullets.children.forEach(Bullet => {
       if (Bullet.x + Bullet.width >= Allien.x && Bullet.y + Bullet.height >= Allien.y && 
-        Bullet.x <= Allien.x + Allien.width && Bullet.y <= Allien.y + Allien.height) {
-          Bullets.removeChild(Bullet);
-          Allien.alpha -= 0.5;
-          //for sound
-          const test = PIXI.loader.resources.sound;
-          test.data.play();
+            Bullet.x <= Allien.x + Allien.width && Bullet.y <= Allien.y + Allien.height) {
+            Bullet.kill-=Allien.score;
+            if(Bullet.kill<=0){
+              Bullets.removeChild(Bullet);
+            }  
+            // Allien.alpha -= (Allien.point*bullet.value);
+            Allien.attack += (Allien.point*bullet.value);
+            //for sound
+            const test = PIXI.loader.resources.sound;
+            test.data.play();
       }
-      bombText.text = `Bomb: ${bomb}`; 
+        bombText.text = `Bomb: ${bomb}`; 
     });
 
-    if (Allien.alpha <= 0) {
-      shooter.score += 1;
-      scorebombIncrease+=1;
+    if (Allien.attack>=1) {
+      Allien.alpha = 0;
+      shooter.score += Allien.score;
+      scorebombIncrease+=Allien.score;
       scoreText.text = `Score: ${shooter.score}`;
       Allien.visible = false;
-      Allien.x = 810;
+      Allien.x = 1010;
       Allien.y = randomInt(0, app.stage.height - Allien.height );
-      if(scorebombIncrease>=10&&shooter.score<50){
-        scorebombIncrease-=10;
+      if(shooter.score>=10&&shooter.score<30&&scorebombIncrease>=10){
         bomb+=1;
-        const level1_sprite = new PIXI.Sprite(level1);
+        scorebombIncrease-=10;
+        const level1_sprite = new PIXI.Sprite(loader.resources.level1.texture);
         level1_sprite.width = 120;
         level1_sprite.height = 120;
+        level1_sprite.point=0.5;
+        level1_sprite.attack=0;
+        level1_sprite.score=2;
         level1_sprite.x =  randomInt(xDefenderOffset, 2000);
         level1_sprite.y = randomInt(0, app.stage.height - defender.height);
         Defenders.addChild(level1_sprite);
         Defenders.removeChild(Allien);
       }
-      if(scorebombIncrease>=10&&shooter.score>50){
-        scorebombIncrease-=10;
+      else if(shooter.score>=30&&shooter.score<50&&scorebombIncrease>=10){
         bomb+=1;
-        const level2_sprite = new PIXI.Sprite(level2);
-        level2_sprite.width = 120;
-        level2_sprite.height = 90;
+        scorebombIncrease-=10;
+        const level2_sprite = new PIXI.Sprite(loader.resources.level2.texture);
+        level2_sprite.width = 130;
+        level2_sprite.height = 60;
+        level2_sprite.attack=0;
+        level2_sprite.point=0.25;
+        level2_sprite.score=4;
         level2_sprite.x =  randomInt(xDefenderOffset, 2000);
         level2_sprite.y = randomInt(0, app.stage.height - defender.height);
         Defenders.addChild(level2_sprite);
+        Defenders.removeChild(Allien);  
+      }
+      else if(shooter.score>=50&&shooter.score<80&&scorebombIncrease>=10){
+        bomb+=2;
+        scorebombIncrease-=10;
+        const level3_sprite = new PIXI.Sprite(loader.resources.level3.texture);
+        level3_sprite.width = 150;
+        level3_sprite.height = 100;
+        level3_sprite.point=0.2;
+        level3_sprite.attack=0;
+        level3_sprite.score=5;
+        level3_sprite.x =  randomInt(xDefenderOffset, 2000);
+        level3_sprite.y = randomInt(0, app.stage.height - defender.height);
+        Defenders.addChild(level3_sprite);
         Defenders.removeChild(Allien);
+      }
+      else if(shooter.score>=80&&shooter.score<110&&scorebombIncrease>=10){
+        bomb+=2;
+        scorebombIncrease-=10;
+        const level4_sprite = new PIXI.Sprite(loader.resources.level4.texture);
+        level4_sprite.width = 120;
+        level4_sprite.height = 90;
+        level4_sprite.point=0.125;
+        level4_sprite.attack=0;
+        level4_sprite.score=8;
+        level4_sprite.x =  randomInt(xDefenderOffset, 2000);
+        level4_sprite.y = randomInt(0, app.stage.height - defender.height);
+        Defenders.addChild(level4_sprite);
+        Defenders.removeChild(Allien);
+      }
+      else if(shooter.score>=110&&shooter.score<150&&scorebombIncrease>=10){
+        bomb+=3;
+        scorebombIncrease-=10;
+        const level5_sprite = new PIXI.Sprite(loader.resources.level5.texture);
+        level5_sprite.width = 150;
+        level5_sprite.height = 90;
+        level5_sprite.attack=0;
+        level5_sprite.point=0.1;
+        level5_sprite.score=10;
+        level5_sprite.x =  randomInt(xDefenderOffset, 2000);
+        level5_sprite.y = randomInt(0, app.stage.height - defender.height);
+        Defenders.addChild(level5_sprite);
+        Defenders.removeChild(Allien);
+      }
+      else if(shooter.score>=150&&scorebombIncrease>=10){
+        bomb+=3;
+        scorebombIncrease-=10;
+        const level6_sprite = new PIXI.Sprite(loader.resources.level6.texture);
+        level6_sprite.width = 150;
+        level6_sprite.height = 150;
+        level6_sprite.attack=0;
+        level6_sprite.point=0.05;
+        level6_sprite.score=20;
+        level6_sprite.x =  randomInt(xDefenderOffset, 2000);
+        level6_sprite.y = randomInt(0, app.stage.height - defender.height);
+        Defenders.addChild(level6_sprite);
+        Defenders.removeChild(Allien);
+      }
+      if(Allien.score==1){
+        killText.text = `Last Killed: A Noob :)`;
+      }
+      else if(Allien.score==2){
+        killText.text = `Last Killed: A Pupil (ᵔᴥᵔ)`;
+      }
+      else if(Allien.score==4){
+        killText.text = `Last Killed: A Specialist (¬‿¬)`;
+      }
+      else if(Allien.score==5){
+        killText.text = `Last Killed: A Expert ◉_◉`;
+      }
+      else if(Allien.score==8){
+        killText.text = `Last Killed: A Master  ♥‿♥`;
+      }
+      else if(Allien.score==10){
+        killText.text = `Last Killed: A International Master ( ͡° ͜ʖ ͡°)`;
+      }
+      else if(Allien.score==20){
+        killText.text = `Last Killed: A Grandmaster (▀̿Ĺ̯▀̿ ̿)`;
       }
     }
 
     if (Allien.x <= -90) {
-      Allien.x = 800;
+      Allien.x = 1000;
       Allien.y = randomInt(0, app.stage.height - Allien.height );
     }
     
-    if (Allien.x >= 800) {
+    if (Allien.x >= 1000) {
       Allien.visible = true;
       Allien.alpha = 1;
+      Allien.attack=0;
     }
   });
 
@@ -387,7 +499,6 @@ function handleCircButtonPressed(e) {
 }
 
 let currentlyPressedKeys = {};
-let bomb =5;
 function handleKeyDown(e) {
     currentlyPressedKeys[e.keyCode] = true;
 
@@ -406,6 +517,14 @@ function handleKeyDown(e) {
         bullet.x = shooter.x + shooter.width;
         bullet.y = shooter.y + shooter.height/2;
         bomb=bomb-1;
+      }
+    }else if (e.keyCode == 78) {
+      if(Nuclearbomb>0){
+        e.preventDefault();
+        Bullets.addChild(renderNuclearBomb());
+        bullet.x = shooter.x + shooter.width;
+        bullet.y = shooter.y + shooter.height/2;
+        Nuclearbomb=Nuclearbomb-1;
       }
     }
 }
@@ -453,7 +572,7 @@ function handleKeyButtons() {
     if (currentlyPressedKeys[68]) {
         // "D"            
         shooter.x += shooter.vx;
-        if(shooter.x >= 800-shooter.width) shooter.x = 800-shooter.width;
+        if(shooter.x >= 1000-shooter.width) shooter.x = 1000-shooter.width;
     }
 }
 
