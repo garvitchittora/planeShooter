@@ -163,16 +163,17 @@ function setup() {
 
   renderNuclearBomb = () => {
     bullet = new PIXI.Graphics();
+    bullet.beginFill(0xff751a);
+    bullet.drawPolygon(new PIXI.Point(-50,-100),new PIXI.Point(-50,100),new PIXI.Point(0,50),new PIXI.Point(0,-50));
     bullet.beginFill(0xFFFF00);
-    bullet.drawEllipse(0, 0, 200,200);
+    bullet.drawRect(0,-50, 400,100);
     bullet.beginFill(0xff8533);   
-    bullet.drawEllipse(50, 0, 100, 100);
-    bullet.beginFill(0xff751a);   
-    bullet.drawEllipse(150, 0,50, 50);
+    bullet.drawPolygon(new PIXI.Point(400,-50),new PIXI.Point(400,50),new PIXI.Point(600,0));
+       
     bullet.beginFill(0xff1a1a);
     bullet.drawEllipse(300, 0, 10,10);
     bullet.endFill();
-    bullet.velocity = 20;
+    bullet.velocity = 1;
     bullet.value=30;
     bullet.kill=30;
     return bullet;
@@ -349,6 +350,7 @@ function play() {
         level1_sprite.y = randomInt(0, app.stage.height - defender.height);
         Defenders.addChild(level1_sprite);
         Defenders.removeChild(Allien);
+        shooter.texture=loader.resources.level6.texture;
       }
       else if(shooter.score>=30&&shooter.score<50&&scorebombIncrease>=10){
         bomb+=1;
