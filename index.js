@@ -78,8 +78,8 @@ function loadProgressHandler(loader, resource) {
 let Defenders, PauseContainer;
 let space, shooter, defender, bullet; 
 let spaceVelocity = 2, shooterMaxVelocity = 10, defendersVelocity=4 ;
-let numberOfDefenders = 5, xDefenderOffset = 1000,bomb =20,Nuclearbomb=10;
-let scorebombIncrease=0,healthMessage, scoreText,killText;
+let numberOfDefenders = 5, xDefenderOffset = 1000,bomb =20,Nuclearbomb=3,Laserbomb=3;
+let scorebombIncrease=0,healthMessage, scoreText,killText,LaserText;
 
 //for level change
 var rad = document.myForm.easy;
@@ -94,7 +94,6 @@ for (let i = 0; i < rad.length; i++) {
     });
 }
 
-let fireDirection = 1;
 let points = [];
 
 let textStyle = new PIXI.TextStyle({
@@ -161,17 +160,32 @@ function setup() {
     return bullet;
   }
 
-  renderNuclearBomb = () => {
+  // renderNuclearBomb = () => {
+  //   bullet = new PIXI.Graphics();
+  //   bullet.beginFill(0xff751a);
+  //   bullet.drawPolygon(new PIXI.Point(-50,-10),new PIXI.Point(-50,10),new PIXI.Point(0,5),new PIXI.Point(0,-5));
+  //   bullet.beginFill(0xFFFF00);
+  //   bullet.drawRect(0,-5, 400,10);
+  //   bullet.beginFill(0xff8533);   
+  //   bullet.drawPolygon(new PIXI.Point(400,-5),new PIXI.Point(400,5),new PIXI.Point(600,0)); 
+  //   bullet.beginFill(0xff1a1a);
+  //   bullet.drawEllipse(600, 0, 2,2);
+  //   bullet.endFill();
+  //   bullet.velocity = 1;
+  //   bullet.value=30;
+  //   bullet.kill=30;
+  //   return bullet;
+  // }
+  renderLaser = () => {
     bullet = new PIXI.Graphics();
-    bullet.beginFill(0xff751a);
-    bullet.drawPolygon(new PIXI.Point(-50,-100),new PIXI.Point(-50,100),new PIXI.Point(0,50),new PIXI.Point(0,-50));
     bullet.beginFill(0xFFFF00);
-    bullet.drawRect(0,-50, 400,100);
-    bullet.beginFill(0xff8533);   
-    bullet.drawPolygon(new PIXI.Point(400,-50),new PIXI.Point(400,50),new PIXI.Point(600,0));
-       
+    bullet.drawRect(-3000,-5, 1000,5);
+    bullet.beginFill(0xff8533); 
+    bullet.drawRect(-1000,-5, 5000,5); 
+    bullet.beginFill(0xff751a); 
+    bullet.drawRect(-2000,-5, 1000,5);  
     bullet.beginFill(0xff1a1a);
-    bullet.drawEllipse(300, 0, 10,10);
+    bullet.drawRect(0,-5, 300,5);
     bullet.endFill();
     bullet.velocity = 1;
     bullet.value=30;
@@ -211,7 +225,7 @@ function setup() {
     }
   }
 
-  shooter = new PIXI.mesh.Rope(characters["shooter"], points);
+  shooter = new Sprite(characters["shooter"]);
 
   app.stage.addChild(shooter);
   shooter.width = characters["shooter"].width;
@@ -222,7 +236,7 @@ function setup() {
   shooter.position.set(10, 200);
   shooter.vx = 4;
   shooter.vy = 4;
-  shooter.health = 100;
+  shooter.health = 10;
   shooter.score = 0;
 
   shooter.hitArea = new PIXI.Ellipse(shooter.pivot.x, shooter.pivot.y, shooter.width, shooter.height);
@@ -270,10 +284,14 @@ function setup() {
   bombText = new PIXI.Text(`Bomb: ${bomb}`, textStyle);
   app.stage.addChild(bombText);
   bombText.position.set(250, 10);
+  
+  LaserText=new PIXI.Text(`Laser: ${Laserbomb}`, textStyle);
+  app.stage.addChild(LaserText);
+  LaserText.position.set(350, 10);
 
   killText = new PIXI.Text(`Last Killed: No kills yet   :P`, textStyle);
   app.stage.addChild(killText);
-  killText.position.set(350, 10);
+  killText.position.set(450, 10);
 
   gameOverText = new PIXI.Text('Oops.. Game Over!', GameOverTextStyle);
 
@@ -316,7 +334,12 @@ function play() {
     Bullets.children.forEach(Bullet => {
       if (Bullet.x + Bullet.width >= Allien.x && Bullet.y + Bullet.height >= Allien.y && 
             Bullet.x <= Allien.x + Allien.width && Bullet.y <= Allien.y + Allien.height) {
-            Bullet.kill-=Allien.score;
+            if(Bullet.kill>=Allien.score){
+              Bullet.kill-=Allien.score;
+            }else{
+              Allien.score-=Bullet.kill;
+              Bullet.kill=0; 
+            }
             if(Bullet.kill<=0){
               Bullets.removeChild(Bullet);
             }  
@@ -326,7 +349,8 @@ function play() {
             const test = PIXI.loader.resources.sound;
             test.data.play();
       }
-        bombText.text = `Bomb: ${bomb}`; 
+        bombText.text = `Bomb: ${bomb}`;
+        LaserText.text = `Laser: ${Laserbomb}`; 
     });
 
     if (Allien.attack>=1) {
@@ -350,7 +374,7 @@ function play() {
         level1_sprite.y = randomInt(0, app.stage.height - defender.height);
         Defenders.addChild(level1_sprite);
         Defenders.removeChild(Allien);
-        shooter.texture=loader.resources.level6.texture;
+        // shooter.texture=loader.resources.level6.texture;
       }
       else if(shooter.score>=30&&shooter.score<50&&scorebombIncrease>=10){
         bomb+=1;
@@ -462,13 +486,6 @@ function play() {
     state = GameOver;
   }
 
-  for (let i = 0; i < 5; i++) {
-    if(points[4].x <= 2.4) fireDirection = 1;
-    else if (points[4].x >= 3.6) fireDirection = -1;
-
-    if (fireDirection == 1) points[i].x += 0.4;
-    else if (fireDirection == -1) points[i].x -= 0.4;
-  }
 }
 
 function GameOver() {
@@ -508,25 +525,25 @@ function handleKeyDown(e) {
       e.preventDefault();
       Bullets.addChild(renderBullet());
       bullet.x = shooter.x + shooter.width;
-      bullet.y = shooter.y + 4*shooter.height/5;
+      bullet.y = shooter.y + 4*shooter.height/5+40;
     } else if (e.keyCode == 80) {
       e.preventDefault();
-      handleGamePause();
+      ( document.getElementsByClassName('pause')[0]).click();
     }else if (e.keyCode == 66) {
       if(bomb>0){
         e.preventDefault();
         Bullets.addChild(renderBomb());
         bullet.x = shooter.x + shooter.width;
-        bullet.y = shooter.y + shooter.height/2;
+        bullet.y = shooter.y + shooter.height/2+30;
         bomb=bomb-1;
       }
     }else if (e.keyCode == 78) {
-      if(Nuclearbomb>0){
+      if(Laserbomb>0){
         e.preventDefault();
-        Bullets.addChild(renderNuclearBomb());
+        Bullets.addChild(renderLaser());
         bullet.x = shooter.x + shooter.width;
         bullet.y = shooter.y + shooter.height/2;
-        Nuclearbomb=Nuclearbomb-1;
+        Laserbomb=Laserbomb-1;
       }
     }
 }
@@ -556,13 +573,13 @@ function handleKeyButtons() {
     if (currentlyPressedKeys[87]) {
         // "W"
         shooter.y -= shooter.vy;
-        if(shooter.y <= 0) shooter.y = 0;
+        if(shooter.y <= -50) shooter.y = -50;
     } 
 
     if (currentlyPressedKeys[83]) {
         // "S"
         shooter.y += shooter.vy;
-        if(shooter.y >= 600-shooter.height) shooter.y = 600-shooter.height;
+        if(shooter.y >= 550-shooter.height) shooter.y = 550-shooter.height;
     } 
 
     if (currentlyPressedKeys[65]) {
