@@ -236,7 +236,7 @@ function setup() {
   shooter.position.set(10, 200);
   shooter.vx = 4;
   shooter.vy = 4;
-  shooter.health = 10;
+  shooter.health = 100;
   shooter.score = 0;
 
   shooter.hitArea = new PIXI.Ellipse(shooter.pivot.x, shooter.pivot.y, shooter.width, shooter.height);
@@ -322,8 +322,8 @@ function play() {
 
     Defenders.children.forEach((Allien, index) => {
     Allien.x -= defendersVelocity + index/1.5;
-    if(shooter.x + shooter.width >= Allien.x && shooter.y + shooter.height >= Allien.y && 
-      shooter.x <= Allien.x + Allien.width && shooter.y <= Allien.y + Allien.height) {
+    if(shooter.x + shooter.width >= Allien.x && shooter.y + shooter.height+50 >= Allien.y && 
+      shooter.x <= Allien.x + Allien.width && shooter.y+50 <= Allien.y + Allien.height) {
       shooter.health -= 1;
       healthText.text = `Health: ${shooter.health}`;
       Allien.visible = false;
@@ -542,7 +542,7 @@ function handleKeyDown(e) {
         e.preventDefault();
         Bullets.addChild(renderLaser());
         bullet.x = shooter.x + shooter.width;
-        bullet.y = shooter.y + shooter.height/2;
+        bullet.y = shooter.y + shooter.height/2+35;
         Laserbomb=Laserbomb-1;
       }
     }
